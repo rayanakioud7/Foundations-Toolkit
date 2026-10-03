@@ -20,7 +20,7 @@ Stack:                Heap:
                      +----------------------+
 ```
 
-![alt text](image.png)
+![Heap memory layout](./asset/heap-layout.png)
 
 ## Mathematical Grounding
 
@@ -43,39 +43,43 @@ This proves that the average cost per insertion remains constant, even though in
 
 ## Memory Validation (Valgrind)
 
-The implementation is verified to be memory-safe. Valgrind output after a full test suite (create, append, get, set, free):
+Certified on the full 100,000-element benchmark run — zero leaks at scale:
 
 ```text
-==8723== HEAP SUMMARY:
-==8723==     in use at exit: 0 bytes in 0 blocks
-==8723==   total heap usage: 5 allocs, 5 frees, 1,104 bytes allocated
-==8723== 
-==8723== All heap blocks were freed -- no leaks are possible
-==8723== ERROR SUMMARY: 0 errors from 0 contexts
+==9237== HEAP SUMMARY:
+==9237==     in use at exit: 0 bytes in 0 blocks
+==9237==   total heap usage: 100,019 allocs, 100,019 frees, 20,001,249,636 bytes allocated
+==9237== 
+==9237== All heap blocks were freed -- no leaks are possible
+==9237== ERROR SUMMARY: 0 errors from 0 contexts
 ```
+
+Note the total allocation volume: **20,001,249,636 bytes** of heap traffic to store a final payload of 400,000 bytes (100,000 `int`s). The naive strategy moved ~50,000x more memory than the data it holds — the $O(N^2)$ formula, printed as a byte count.
 
 ## Performance Benchmark
 
-Comparative benchmark between Naive Realloc (reallocating on every push) and the Doubling Strategy (amortized push) for 10,000 elements.
+100,000 insertions per strategy. Hardware: AMD Ryzen 7 7700, 32 GB DDR5. Compiled with `gcc -O0 -g -Wall -Wextra`.
 
-| Operation | Naive Realloc | Doubling Strategy (Amortized) |
-| :--- | :--- | :--- |
-| **Total Time** | *[To be filled after benchmark]* | *[To be filled after benchmark]* |
-| **Time Complexity** | $O(N^2)$ | $O(N)$ total / $O(1)$ amortized |
+| Environment | Naive (+1 realloc per push) | Doubling (amortized) | Speedup |
+| :--- | :--- | :--- | :--- |
+| **Native (glibc)** | 0.000814 s | 0.000396 s | ~2.0x |
+| **Valgrind Memcheck** | 9.154867 s | 0.005440 s | ~1,683x |
+
+**Reading the numbers honestly.** Natively, glibc's `realloc` repeatedly extends the heap's top chunk in place, so the naive run avoids most copies and the gap looks small. Under Valgrind's allocator — and in any real, fragmented heap where in-place extension is impossible — every `+1` realloc performs a full array copy, and the algorithmic gap appears in full: **1,683x**, with **20 GB** of allocation traffic for a **400 KB** payload.
+
+Complexity is a property of the algorithm; constant factors are a property of the allocator. An engineer measures both.
 
 ## Build & Execution
 
-Compile with strict warnings and debug symbols to ensure Valgrind can map errors to specific source lines.
-
 ```bash
-# Compile with strict flags
-gcc -g -Wall -Wextra -Werror DynamicArray-MVP.c -o dynarray
+# Compile with strict warnings and debug symbols
+gcc -g -O0 -Wall -Wextra DynamicArray-MVP.c -o dynarric
 
-# Run the test suite
-./dynarray
+# Native timing run (benchmark)
+./dynarric
 
-# Profile for memory leaks and invalid accesses
-valgrind --leak-check=full --show-leak-kinds=all ./dynarray
+# Memory audit run (validation — never benchmark under Valgrind)
+valgrind --leak-check=full --show-leak-kinds=all ./dynarric
 ```
 
 *Built as part of the `foundations-toolkit` Master Plan.*
