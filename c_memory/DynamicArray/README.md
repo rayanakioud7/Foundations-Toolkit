@@ -20,6 +20,8 @@ Stack:                Heap:
                      +----------------------+
 ```
 
+![alt text](image.png)
+
 ## Mathematical Grounding
 
 The core engineering challenge is the `append` (push) operation. If we call `realloc` on every insertion, the time complexity is $O(N)$ per operation, resulting in $O(N^2)$ total time for $N$ insertions.
