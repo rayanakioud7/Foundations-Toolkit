@@ -1,0 +1,14 @@
+# Compiled binaries
+*.o
+*.out
+dynarric
+main
+reverse
+test
+
+# Valgrind core dumps
+vgcore.*
+
+# Python cache
+__pycache__/
+*.pyc
